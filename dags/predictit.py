@@ -13,8 +13,16 @@ default_args = {
     "email_on_retry": False
 }
 
+predictit = PredictitAPI()
+
 with DAG(
     dag_id="predictit_extraction",
-    default_args=default_args
+    default_args=default_args,
+    catchup=False
 ) as dag:
-    pass
+    
+    fetch_market_data = PythonOperator(
+        task_id='fetch_market_data',
+        python_callable=predictit.poll_market_data,
+        dag=dag
+    )
