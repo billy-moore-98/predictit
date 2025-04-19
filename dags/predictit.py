@@ -1,6 +1,7 @@
 import datetime
 
 from airflow import DAG
+from airflow.operators.empty import EmptyOperator
 from airflow.operators.python import PythonOperator
 from src.api import PredictitAPI
 
@@ -21,8 +22,12 @@ with DAG(
     catchup=False
 ) as dag:
     
+    initiate = EmptyOperator(task_id='initiate')
+    
     fetch_market_data = PythonOperator(
         task_id='fetch_market_data',
         python_callable=predictit.poll_market_data,
         dag=dag
     )
+
+    initiate >> fetch_market_data
