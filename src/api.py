@@ -37,7 +37,7 @@ class PredictitAPI:
         except Exception as e:
             print(f"Unknown error occurred: {e}")
 
-    def store_to_s3(self, data: dict, bucket: Optional[str] = 'bmooreawsbucket', filename: Optional[str] = None):
+    def store_to_s3(self, data: dict, bucket: Optional[str] = None, filename: Optional[str] = None):
         if not filename:
             timestamp = datetime.datetime.utcnow().strftime('%Y-%m-%dT%H-%M-%S')
             filename = f'market_data_{timestamp}.json'

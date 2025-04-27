@@ -1,9 +1,12 @@
 import datetime
+import os
 
 from airflow import DAG
 from airflow.operators.empty import EmptyOperator
 from airflow.operators.python import PythonOperator
 from src.api import PredictitAPI
+
+s3_bucket = os.getenv('S3_BUCKET')
 
 default_args = {
     "owner": "Billy Moore",
@@ -24,7 +27,7 @@ def store_data_callable(**kwargs):
     data = kwargs['ti'].xcom_pull(key='market_data', task_ids='poll_market_data')
     timestamp = datetime.datetime.utcnow().strftime('%Y-%m-%dT%H-%M-%S')
     filename = f'market_data_{timestamp}.json'
-    predictit.store_to_s3(data, filename=filename)
+    predictit.store_to_s3(data, bucket=s3_bucket, filename=filename)
     kwargs['ti'].xcom_push(key='filename', value=filename)
 
 with DAG(
