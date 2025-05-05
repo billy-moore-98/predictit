@@ -12,7 +12,7 @@ class PredictitAPI:
         self.base_url = base_url
         self.s3_client = boto3.client('s3')
 
-    def poll_market_data(self, market_id: Optional[str] = None):
+    def poll_market_data(self, market_id: Optional[str] = None) -> Optional[dict]:
         """
         Poll the PredictIt api market data and return the latest share prices
 
