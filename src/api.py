@@ -1,10 +1,14 @@
 import boto3
 import datetime
 import json
+import logging
 import requests
 
 from botocore.exceptions import ClientError
 from typing import Optional
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 class PredictitAPI:
 
@@ -31,11 +35,11 @@ class PredictitAPI:
             json_data = response.json()
             return json_data
         except requests.exceptions.HTTPError as e:
-            raise RuntimeError(f"HTTP error occurred: {e}")
+            logging.error(f"HTTP error occurred: {e}")
         except requests.exceptions.RequestException as e:
-            raise RuntimeError(f"Request error occurred: {e}")
+            logging.error(f"Request error occurred: {e}")
         except Exception as e:
-            raise RuntimeError(f"An error occurred: {e}")
+            logging.error(f"An error occurred: {e}")
 
     def store_to_s3(self, data: dict, bucket: Optional[str] = None, filename: Optional[str] = None):
         if not filename:
@@ -49,6 +53,6 @@ class PredictitAPI:
                 Body=json.dumps(data),
                 ContentType='application/json'
             )
-            print(f'Uploaded {key} to S3 bucket {bucket}')
+            logging.info(f'Uploaded {key} to S3 bucket {bucket}')
         except ClientError as e:
-            print('Failed to upload to bucket: {e}')
+            logging.error('Failed to upload to bucket: {e}')
