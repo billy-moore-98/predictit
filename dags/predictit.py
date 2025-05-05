@@ -25,8 +25,7 @@ def poll_markets_callable(**kwargs):
 
 def store_data_callable(**kwargs):
     data = kwargs['ti'].xcom_pull(key='market_data', task_ids='poll_market_data')
-    timestamp = datetime.datetime.utcnow().strftime('%Y-%m-%dT%H-%M-%S')
-    filename = f'market_data_{timestamp}.json'
+    filename = f'market_data_{kwargs['ts_nodash_with_t']}.json'
     predictit.store_to_s3(data, bucket=s3_bucket, filename=filename)
     kwargs['ti'].xcom_push(key='filename', value=filename)
 
@@ -42,14 +41,16 @@ with DAG(
         task_id='poll_market_data',
         python_callable=poll_markets_callable,
         retries=3,
-        retry_delay=datetime.timedelta(seconds=30)
+        retry_delay=datetime.timedelta(seconds=30),
+        provide_context=True
     )
 
     store_market_data = PythonOperator(
         task_id='store_market_data',
         python_callable=store_data_callable,
         retries=3,
-        retry_delay=datetime.timedelta(seconds=30)
+        retry_delay=datetime.timedelta(seconds=30),
+        provide_context=True
     )
 
 
