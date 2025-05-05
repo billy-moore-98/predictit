@@ -31,11 +31,11 @@ class PredictitAPI:
             json_data = response.json()
             return json_data
         except requests.exceptions.HTTPError as e:
-            print(f"HTTP error: {e}")
+            raise RuntimeError(f"HTTP error occurred: {e}")
         except requests.exceptions.RequestException as e:
-            print(f"Request exception: {e}")
+            raise RuntimeError(f"Request error occurred: {e}")
         except Exception as e:
-            print(f"Unknown error occurred: {e}")
+            raise RuntimeError(f"An error occurred: {e}")
 
     def store_to_s3(self, data: dict, bucket: Optional[str] = None, filename: Optional[str] = None):
         if not filename:
