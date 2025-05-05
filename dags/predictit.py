@@ -40,12 +40,16 @@ with DAG(
     
     poll_market_data = PythonOperator(
         task_id='poll_market_data',
-        python_callable=poll_markets_callable
+        python_callable=poll_markets_callable,
+        retries=3,
+        retry_delay=datetime.timedelta(seconds=30)
     )
 
     store_market_data = PythonOperator(
         task_id='store_market_data',
-        python_callable=store_data_callable
+        python_callable=store_data_callable,
+        retries=3,
+        retry_delay=datetime.timedelta(seconds=30)
     )
 
 
