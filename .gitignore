@@ -175,3 +175,5 @@ cython_debug/
 
 # python notebooks
 *.ipynb
+
+.venv-lambda
