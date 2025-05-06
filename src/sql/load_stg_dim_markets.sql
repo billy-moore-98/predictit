@@ -1,3 +1,5 @@
+TRUNCATE TABLE markets.stg_dim_markets;
+
 INSERT INTO markets.stg_dim_markets (id, name, short_name, status)
 SELECT
     market.value:id::STRING,
