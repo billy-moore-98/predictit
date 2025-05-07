@@ -23,9 +23,10 @@ def lambda_function(execution_timestamp: str):
     bucket = os.getenv('S3_BUCKET')
     if not bucket:
         raise ValueError("S3_BUCKET environment variable is not set")
-    
+    source_key = f'predictit/stage/market_data_{execution_timestamp}.json'
+    destination_key = f'predictit/raw_data/market_data_{execution_timestamp}.json'
     # Load the data from S3
-    s3_object = s3_client.get_object(Bucket=bucket, Key=f'predictit/stage/market_data_{execution_timestamp}.json')
+    s3_object = s3_client.get_object(Bucket=bucket, Key=source_key)
     data = json.loads(s3_object['Body'].read())
     
     try:
@@ -35,6 +36,14 @@ def lambda_function(execution_timestamp: str):
     except Exception as e:
         logger.error(f'Error occurred during data validation: {e}')
         raise
+
+    # copy to raw data and delete stage data
+    s3_client.copy_object(
+        Bucket=bucket,
+        CopySource={'Bucket': bucket, 'Key': source_key},
+        key=destination_key
+    )
+    s3_client.delete_object(Bucket=bucket, Key=source_key)
         
 
 def lambda_handler(event, context) -> Optional[dict]:
