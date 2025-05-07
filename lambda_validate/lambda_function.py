@@ -31,7 +31,7 @@ def lambda_function(execution_timestamp: str):
     
     try:
         # Validate the data
-        PredictitResponse(data)
+        PredictitResponse(**data)
         logger.info('Successfully validated data')
     except Exception as e:
         logger.error(f'Error occurred during data validation: {e}')
