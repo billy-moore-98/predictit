@@ -41,7 +41,7 @@ def lambda_function(execution_timestamp: str):
     s3_client.copy_object(
         Bucket=bucket,
         CopySource={'Bucket': bucket, 'Key': source_key},
-        key=destination_key
+        Key=destination_key
     )
     s3_client.delete_object(Bucket=bucket, Key=source_key)
         
