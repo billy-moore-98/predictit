@@ -31,7 +31,7 @@ def lambda_function(execution_timestamp: str) -> None:
 
 def lambda_handler(event, context) -> Optional[dict]:
     """
-    Lambda function to poll the PredictIt API and store the data in S3
+    Lambda handler to poll the PredictIt API and store the data in S3
 
     Params:
         event (dict): The event data passed to the Lambda function
