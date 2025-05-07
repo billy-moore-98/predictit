@@ -176,4 +176,5 @@ cython_debug/
 # python notebooks
 *.ipynb
 
-.venv-lambda
+.venv-fetch
+.venv-validate
