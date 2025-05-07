@@ -25,7 +25,7 @@ def lambda_function(execution_timestamp: str):
         raise ValueError("S3_BUCKET environment variable is not set")
     
     # Load the data from S3
-    s3_object = s3_client.get_object(Bucket=bucket, Key=f'market_data_{execution_timestamp}.json')
+    s3_object = s3_client.get_object(Bucket=bucket, Key=f'predictit/stage/market_data_{execution_timestamp}.json')
     data = json.loads(s3_object['Body'].read().decode('utf-8'))
     
     try:
