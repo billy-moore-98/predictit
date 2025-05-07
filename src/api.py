@@ -45,7 +45,7 @@ class PredictitAPI:
         if not filename:
             timestamp = datetime.datetime.utcnow().strftime('%Y-%m-%dT%H-%M-%S')
             filename = f'market_data_{timestamp}.json'
-        key = f'predictit/{filename}'
+        key = f'predictit/stage/{filename}'
         try:
             self.s3_client.put_object(
                 Bucket=bucket,
