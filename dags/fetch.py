@@ -45,7 +45,7 @@ with DAG(
     lambda_fetch = AwsLambdaInvokeFunctionOperator(
         task_id='lambda_fetch',
         function_name=lambda_function_fetch_name,
-        payload={'execution_timestamp': '{{ ts_nodash }}'}
+        payload={'filename': 'market_data_{{ ts_nodash }}.json'}
     )
 
     check_fetch = PythonOperator(
@@ -57,7 +57,7 @@ with DAG(
     lamda_validate = AwsLambdaInvokeFunctionOperator(
         task_id='lambda_validate',
         function_name=lambda_function_validate_name,
-        payload={'execution_timestamp': '{{ ts_nodash }}'}
+        payload={'filename': 'market_data_{{ ts_nodash }}.json'}
     )
 
     check_validate = PythonOperator(

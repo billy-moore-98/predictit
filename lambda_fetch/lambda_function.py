@@ -11,7 +11,7 @@ logger.setLevel(logging.INFO)
 predictit = PredictitAPI()
 s3_client = boto3.client('s3')
 
-def lambda_function(execution_timestamp: str) -> None:
+def lambda_function(filename: str) -> None:
     """
     Lambda function to poll the predictit API and store the data in S3
     Params:
@@ -25,7 +25,7 @@ def lambda_function(execution_timestamp: str) -> None:
     bucket = os.getenv('S3_BUCKET')
     if not bucket:
         raise ValueError("S3_BUCKET environment variable is not set")
-    predictit.store_to_s3(data, bucket=bucket, filename=f'market_data_{execution_timestamp}.json')
+    predictit.store_to_s3(data, bucket=bucket, filename=filename)
     logging.info('Successfully stored data to S3')
 
 
@@ -40,8 +40,8 @@ def lambda_handler(event, context) -> Optional[dict]:
         Dict status message
     """
     try:
-        execution_timestamp = event.get('execution_timestamp')
-        lambda_function(execution_timestamp)
+        filename = event.get('filename')
+        lambda_function(filename)
         return {
             'StatusCode': 200,
             'message': 'PredictAPI data succcessfully polled and stored to S3'
