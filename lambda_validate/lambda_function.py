@@ -11,7 +11,7 @@ logger.setLevel(logging.INFO)
 
 s3_client = boto3.client('s3')
 
-def lambda_function(filename: str):
+def lambda_function(execution_timestamp: str):
     """
     Lambda function to validate the PredictIt API data stored in S3
 
@@ -23,8 +23,8 @@ def lambda_function(filename: str):
     bucket = os.getenv('S3_BUCKET')
     if not bucket:
         raise ValueError("S3_BUCKET environment variable is not set")
-    source_key = f'predictit/stage/{filename}'
-    destination_key = f'predictit/raw_data/{filename}'
+    source_key = f'predictit/stage/market_data_{execution_timestamp}.json'
+    destination_key = f'predictit/raw_data/market_data_{execution_timestamp}.json'
     # Load the data from S3
     s3_object = s3_client.get_object(Bucket=bucket, Key=source_key)
     data = json.loads(s3_object['Body'].read())
