@@ -58,6 +58,8 @@ def lambda_handler(event, context) -> Optional[dict]:
     """
     try:
         execution_timestamp = event.get('execution_timestamp')
+        if not execution_timestamp:
+            raise ValueError("Execution timestamp must be provided in the event data")
         lambda_function(execution_timestamp)
         return {
             'StatusCode': 200,
