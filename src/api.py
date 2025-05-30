@@ -26,7 +26,7 @@ class PredictitAPI:
             dict: The JSON response
         """
         if market_id:
-            url = f"{self.base_url}/marketdata/markets/{market_id}"
+            url = f"{self.base_url}/markets/{market_id}"
         else:
             url = f"{self.base_url}/all"
         try:
