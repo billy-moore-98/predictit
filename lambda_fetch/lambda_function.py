@@ -41,6 +41,8 @@ def lambda_handler(event, context) -> Optional[dict]:
     """
     try:
         filename = event.get('filename')
+        if not filename:
+            raise ValueError("Filename must be provided in the event data")
         lambda_function(filename)
         return {
             'StatusCode': 200,
