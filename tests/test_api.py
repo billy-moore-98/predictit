@@ -1,6 +1,7 @@
 import pytest
 import requests
 
+from botocore.exceptions import ClientError
 from src.api import PredictitAPI
 from unittest.mock import patch, MagicMock
 
@@ -47,6 +48,33 @@ def test_store_to_s3_success(mock_boto_client):
     mock_s3.put_object.assert_called_once_with(
         Bucket=test_bucket,
         Key=expected_key,
+        Body='{"markets": []}',
+        ContentType='application/json'
+    )
+
+@patch('src.api.boto3.client')
+def test_store_to_s3_failure(mock_boto_client, caplog):
+    mock_s3 = MagicMock()
+    mock_boto_client.return_value = mock_s3
+    mock_s3.put_object.side_effect = ClientError(
+        error_response={
+            'Error': {
+                'Code': 'AccessDenied',
+                'Message': 'Access Denied'
+            }
+        },
+        operation_name='PutObject'
+    )
+    test_data = {'markets': []}
+    test_bucket = 'test-bucket'
+    test_filename = 'test_file.json'
+    predictit = PredictitAPI()
+    with pytest.raises(ClientError):
+        predictit.store_to_s3(test_data, bucket=test_bucket, filename=test_filename)
+    
+    mock_s3.put_object.assert_called_once_with(
+        Bucket=test_bucket,
+        Key=f'predictit/stage/{test_filename}',
         Body='{"markets": []}',
         ContentType='application/json'
     )
