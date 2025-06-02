@@ -178,3 +178,35 @@ cython_debug/
 
 .venv-fetch
 .venv-validate
+
+# Terraform state
+*.tfstate
+*.tfstate.*
+crash.log
+
+# Terraform plan output
+*.tfplan
+
+# Local Terraform directories
+.terraform/
+.terraform.lock.hcl
+
+# Sensitive variable files (if used)
+*.tfvars
+*.tfvars.json
+
+# Override files (can contain secrets)
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# CLI configuration file (may contain credentials)
+.terraformrc
+terraform.rc
+
+# Ignore backup files
+*.bak
+*.tmp
+*.swp
+*.swo
