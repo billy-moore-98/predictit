@@ -55,4 +55,4 @@ def lambda_handler(event, context) -> Optional[dict]:
 
 
 def _deployment_test_dummy():
-    print("This is a dummy function to test the deployment pipeline")
+    print("This is a dummy function to test the deployment pipeline...again")
