@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 from typing import List, Optional
 
+
 class Contract(BaseModel):
     id: int
     dateEnd: str
@@ -16,6 +17,7 @@ class Contract(BaseModel):
     lastClosePrice: Optional[float]
     displayOrder: Optional[float]
 
+
 class Market(BaseModel):
     id: int
     name: str
@@ -24,6 +26,7 @@ class Market(BaseModel):
     contracts: List[Contract]
     timeStamp: str
     status: str
+
 
 class PredictitResponse(BaseModel):
     markets: List[Market]

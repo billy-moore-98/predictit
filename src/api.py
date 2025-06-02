@@ -10,11 +10,11 @@ from typing import Optional
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
-class PredictitAPI:
 
+class PredictitAPI:
     def __init__(self, base_url="https://www.predictit.org/api/marketdata"):
         self.base_url = base_url
-        self.s3_client = boto3.client('s3')
+        self.s3_client = boto3.client("s3")
 
     def poll_market_data(self, market_id: Optional[str] = None) -> Optional[dict]:
         """
@@ -41,19 +41,21 @@ class PredictitAPI:
         except Exception as e:
             logging.error(f"An error occurred: {e}")
 
-    def store_to_s3(self, data: dict, bucket: Optional[str] = None, filename: Optional[str] = None):
+    def store_to_s3(
+        self, data: dict, bucket: Optional[str] = None, filename: Optional[str] = None
+    ):
         if not filename:
-            timestamp = datetime.datetime.utcnow().strftime('%Y-%m-%dT%H-%M-%S')
-            filename = f'market_data_{timestamp}.json'
-        key = f'predictit/stage/{filename}'
+            timestamp = datetime.datetime.utcnow().strftime("%Y-%m-%dT%H-%M-%S")
+            filename = f"market_data_{timestamp}.json"
+        key = f"predictit/stage/{filename}"
         try:
             self.s3_client.put_object(
                 Bucket=bucket,
                 Key=key,
                 Body=json.dumps(data),
-                ContentType='application/json'
+                ContentType="application/json",
             )
-            logging.info(f'Uploaded {key} to S3 bucket {bucket}')
+            logging.info(f"Uploaded {key} to S3 bucket {bucket}")
         except ClientError as e:
-            logging.error(f'Failed to upload to bucket: {e}')
+            logging.error(f"Failed to upload to bucket: {e}")
             raise
