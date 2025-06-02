@@ -55,5 +55,5 @@ class PredictitAPI:
             )
             logging.info(f'Uploaded {key} to S3 bucket {bucket}')
         except ClientError as e:
-            logging.error('Failed to upload to bucket: {e}')
+            logging.error(f'Failed to upload to bucket: {e}')
             raise
