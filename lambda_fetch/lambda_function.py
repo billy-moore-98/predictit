@@ -53,5 +53,6 @@ def lambda_handler(event, context) -> Optional[dict]:
         logger.error(f"Error occurred: {e}")
         raise
 
+
 def _deployment_test_dummy():
     print("This is a dummy function to test the deployment pipeline")
