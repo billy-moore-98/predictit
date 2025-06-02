@@ -53,7 +53,7 @@ def test_store_to_s3_success(mock_boto_client):
     )
 
 @patch('src.api.boto3.client')
-def test_store_to_s3_failure(mock_boto_client, caplog):
+def test_store_to_s3_failure(mock_boto_client):
     mock_s3 = MagicMock()
     mock_boto_client.return_value = mock_s3
     mock_s3.put_object.side_effect = ClientError(
