@@ -8,10 +8,10 @@ on:
 
 permissions:
   contents: read
+  id-token: write
 
 jobs:
   test:
-
     runs-on: ubuntu-latest
 
     steps:
@@ -47,3 +47,55 @@ jobs:
       with:
         name: test-report
         path: test-reports/report.html
+
+  deploy_lambda_fetch:
+    needs: test
+    if: ${{ needs.test.result == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check for code changes
+        id: changes_fetch
+        run: |
+          echo "changed=false" >> $GITHUB_OUTPUT
+          if git diff --name-only HEAD^ HEAD | grep -q '^lambda_fetch/'; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Configure AWS credentials
+        if: steps.changes_fetch.outputs.changed == 'true'
+        uses: aws-actions/configure-aws-credentials@v3
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Log in to Amazon ECR
+        if: steps.changes_fetch.outputs.changed == 'true'
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build, tag, and push Docker image to ECR
+        if: steps.changes_fetch.outputs.changed == 'true'
+        run: |
+          IMAGE_TAG=latest
+          ECR_REGISTRY=$(aws sts get-caller-identity --query "Account" --output text).dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
+          ECR_REPOSITORY=predictit-fetch
+          docker buildx build --platform linux/amd64 --provenance=false \
+            -t $ECR_REPOSITORY:$IMAGE_TAG \
+            -f ./lambda_fetch/Dockerfile .
+          docker tag $ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+
+      - name: Update Lambda function
+        if: steps.changes_fetch.outputs.changed == 'true'
+        run: |
+          FUNCTION_NAME=predictit-fetch
+          IMAGE_TAG=latest
+          ECR_REGISTRY=$(aws sts get-caller-identity --query "Account" --output text).dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
+          ECR_REPOSITORY=predictit-fetch
+
+          aws lambda update-function-code \
+            --function-name $FUNCTION_NAME \
+            --image-uri $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG \
+            --region ${{ secrets.AWS_REGION }}
