@@ -11,6 +11,9 @@ provider "aws" {
   region = "eu-west-2"
 }
 
+resource "aws_s3_bucket" "predictit_bucket" {
+  bucket = data.aws_ssm_parameter.s3_bucket.value
+}
 
 resource "aws_lambda_function" "lambda_fetch" {
   function_name = "predictit-fetch"
