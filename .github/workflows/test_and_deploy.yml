@@ -38,3 +38,6 @@ jobs:
     if: ${{ github.event_name == 'push' }}
     needs: test
     uses: ./.github/workflows/deploy_lambdas.yml
+    secrets:
+      AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
+      AWS_REGION: ${{ secrets.AWS_REGION }}
