@@ -3,8 +3,18 @@ name: Test and deploy
 on:
   push:
     branches: [ "main" ]
+    paths:
+      - 'src/**'
+      - 'tests/**'
+      - 'lambda_fetch/**'
+      - 'lambda_validate/**'
   pull_request:
     branches: [ "main" ]
+    paths:
+      - 'src/**'
+      - 'tests/**'
+      - 'lambda_fetch/**'
+      - 'lambda_validate/**'
 
 concurrency:
   group: ${{ github.ref }}   
@@ -16,78 +26,10 @@ permissions:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'push' || github.event_name == 'pull_request' }}
+    uses: ./.github/workflows/test.yml
 
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Set up Python 3.10
-      uses: actions/setup-python@v3
-      with:
-        python-version: "3.10"
-
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install ruff pytest pytest-html
-        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-
-    - name: Lint with ruff
-      run: |
-        ruff check --output-format=github --target-version=py39
-
-    - name: Check code formatting with Ruff
-      run: ruff format --diff --target-version=py39
-      continue-on-error: false
-      
-    - name: Run tests and generate HTML report
-      run: |
-        mkdir -p test-reports
-        pytest tests/ --html=test-reports/report.html --self-contained-html
-
-    - name: Upload test report artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: test-report
-        path: test-reports/report.html
-
-  deploy_lambda_fetch:
+  deploy:
+    if: ${{ github.event_name == 'push' }}
     needs: test
-    if: ${{ needs.test.result == 'success' }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v3
-        with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: ${{ secrets.AWS_REGION }}
-
-      - name: Log in to Amazon ECR
-        uses: aws-actions/amazon-ecr-login@v2
-
-      - name: Build, tag, and push Docker image to ECR
-        run: |
-          IMAGE_TAG=latest
-          ECR_REGISTRY=$(aws sts get-caller-identity --query "Account" --output text).dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
-          ECR_REPOSITORY=predictit-fetch
-          docker buildx build --platform linux/amd64 --provenance=false \
-            -t $ECR_REPOSITORY:$IMAGE_TAG \
-            -f ./lambda_fetch/Dockerfile .
-          docker tag $ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-
-      - name: Update Lambda function
-        run: |
-          FUNCTION_NAME=predictit-fetch
-          IMAGE_TAG=latest
-          ECR_REGISTRY=$(aws sts get-caller-identity --query "Account" --output text).dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
-          ECR_REPOSITORY=predictit-fetch
-
-          aws lambda update-function-code \
-            --function-name $FUNCTION_NAME \
-            --image-uri $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG \
-            --region ${{ secrets.AWS_REGION }}
+    uses: ./.github/workflows/deploy_lambdas.yml

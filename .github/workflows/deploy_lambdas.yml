@@ -1,0 +1,65 @@
+name: deploy lambdas
+
+on:
+  workflow_call:
+
+jobs:
+  deploy_lambda_fetch:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v3
+      with:
+        role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+        aws-region: ${{ secrets.AWS_REGION }}
+
+    - name: Log in to Amazon ECR
+      uses: aws-actions/amazon-ecr-login@v2
+
+    - name: Build, tag, and push fetch Docker image to ECR
+      run: |
+        IMAGE_TAG=latest
+        ECR_REGISTRY=$(aws sts get-caller-identity --query "Account" --output text).dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
+        ECR_REPOSITORY=predictit-fetch
+        docker buildx build --platform linux/amd64 --provenance=false \
+            -t $ECR_REPOSITORY:$IMAGE_TAG \
+            -f ./lambda_fetch/Dockerfile .
+        docker tag $ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+
+    - name: Build, tag snd push validate Docker image to ECR
+      run:
+        IMAGE_TAG=latest
+        ECR_REGISTRY=$(aws sts get-caller-identity --query "Account" --output text).dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
+        ECR_REPOSITORY=predictit-validate
+        docker buildx build --platform linux/amd64 --provenance=false \
+            -t $ECR_REPOSITORY:$IMAGE_TAG \
+            -f ./lambda_validate/Dockerfile .
+        docker tag $ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+
+    - name: Update fetch Lambda function
+      run: |
+        FUNCTION_NAME=predictit-fetch
+        IMAGE_TAG=latest
+        ECR_REGISTRY=$(aws sts get-caller-identity --query "Account" --output text).dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
+        ECR_REPOSITORY=predictit-fetch
+
+        aws lambda update-function-code \
+            --function-name $FUNCTION_NAME \
+            --image-uri $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG \
+            --region ${{ secrets.AWS_REGION }}
+
+    - name: Update validate Lambda function
+      run: |
+        FUNCTION_NAME=predictit-validate
+        IMAGE_TAG=latest
+        ECR_REGISTRY=$(aws sts get-caller-identity --query "Account" --output text).dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
+        ECR_REPOSITORY=predictit-validate
+        aws lambda update-function-code \
+            --function-name $FUNCTION_NAME \
+            --image-uri $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG \
+            --region ${{ secrets.AWS_REGION }}
