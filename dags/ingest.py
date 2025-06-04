@@ -15,8 +15,8 @@ default_args = {
 
 
 def read_sql_query(dir: str, name: str) -> str:
-    root_dir = Path(__file__).parent.parent
-    sql_path = root_dir / "sql" / dir / name
+    dag_dir = Path(__file__).parent
+    sql_path = dag_dir / "sql" / dir / name
     with open(sql_path, "r") as f:
         sql = f.read()
     return sql
