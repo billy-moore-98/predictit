@@ -4,7 +4,7 @@ on:
   workflow_call:
 
 jobs:
-  deploy_lambda_fetch:
+  deploy_lambdas:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout
