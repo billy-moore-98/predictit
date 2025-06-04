@@ -59,7 +59,7 @@ with DAG(
         op_kwargs={"task_id": "lambda_fetch"},
     )
 
-    lamda_validate = AwsLambdaInvokeFunctionOperator(
+    lambda_validate = AwsLambdaInvokeFunctionOperator(
         task_id="lambda_validate",
         function_name=lambda_function_validate_name,
         payload={"filename": "market_data_{{ ts_nodash }}.json"},
@@ -81,7 +81,7 @@ with DAG(
         initiate
         >> lambda_fetch
         >> check_fetch
-        >> lamda_validate
+        >> lambda_validate
         >> check_validate
         >> trigger_snowflake_ingestion
     )
