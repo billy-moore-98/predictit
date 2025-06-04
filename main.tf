@@ -13,6 +13,10 @@ provider "aws" {
 
 resource "aws_s3_bucket" "predictit_bucket" {
   bucket = data.aws_ssm_parameter.s3_bucket.value
+
+  tags = {
+    project = "predictit"
+  }
 }
 
 resource "aws_lambda_function" "lambda_fetch" {
@@ -41,6 +45,10 @@ resource "aws_lambda_function" "lambda_fetch" {
 
   tracing_config {
     mode = "PassThrough"
+  }
+
+  tags = {
+    project = "predictit"
   }
 }
 
@@ -72,6 +80,10 @@ resource "aws_lambda_function" "lambda_validate" {
   tracing_config {
     mode = "PassThrough"
   }
+
+  tags = {
+    project = "predictit"
+  }
 }
 
 resource "aws_ecr_repository" "predictit_fetch" {
@@ -85,6 +97,10 @@ resource "aws_ecr_repository" "predictit_fetch" {
   encryption_configuration {
     encryption_type = "AES256"
   }
+
+  tags = {
+    project = "predictit"
+  }
 }
 
 resource "aws_ecr_repository" "predictit_validate" {
@@ -97,5 +113,9 @@ resource "aws_ecr_repository" "predictit_validate" {
 
   encryption_configuration {
     encryption_type = "AES256"
+  }
+
+  tags = {
+    project = "predictit"
   }
 }
