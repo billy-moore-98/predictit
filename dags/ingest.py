@@ -1,8 +1,8 @@
 import datetime
 from pathlib import Path
 
-from airflow.decorators import dag, task
-from airflow.providers.snowflake.operators.snowflake import SnowflakeOperator
+from airflow.decorators import dag
+from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
 
 
 def read_sql_query(dir: str, name: str) -> str:
@@ -30,41 +30,41 @@ def read_sql_query(dir: str, name: str) -> str:
 def ingest_dag():
     execution_timestamp = "{{ dag_run.conf['execution_timestamp'] }}"
 
-    load_stage_raw = SnowflakeOperator(
+    load_stage_raw = SQLExecuteQueryOperator(
         task_id="load_stage_raw",
         sql=read_sql_query("loading", "load_stage_raw.sql"),
-        snowflake_conn_id="snowflake_predictit",
         params={"execution_timestamp": execution_timestamp},
+        conn_id="snowflake_default",
     )
 
-    load_stg_dim_markets = SnowflakeOperator(
+    load_stg_dim_markets = SQLExecuteQueryOperator(
         task_id="load_stg_dim_markets",
         sql=read_sql_query("loading", "load_stg_dim_markets.sql"),
-        snowflake_conn_id="snowflake_predictit",
+        conn_id="snowflake_default",
     )
 
-    load_dim_markets = SnowflakeOperator(
+    load_dim_markets = SQLExecuteQueryOperator(
         task_id="load_dim_markets",
         sql=read_sql_query("loading", "load_dim_markets.sql"),
-        snowflake_conn_id="snowflake_predictit",
+        conn_id="snowflake_default",
     )
 
-    load_stg_dim_contracts = SnowflakeOperator(
+    load_stg_dim_contracts = SQLExecuteQueryOperator(
         task_id="load_stg_dim_contracts",
         sql=read_sql_query("loading", "load_stg_dim_contracts.sql"),
-        snowflake_conn_id="snowflake_predictit",
+        conn_id="snowflake_default",
     )
 
-    load_dim_contracts = SnowflakeOperator(
+    load_dim_contracts = SQLExecuteQueryOperator(
         task_id="load_dim_contracts",
         sql=read_sql_query("loading", "load_dim_contracts.sql"),
-        snowflake_conn_id="snowflake_predictit",
+        conn_id="snowflake_default",
     )
 
-    load_fact_prices = SnowflakeOperator(
+    load_fact_prices = SQLExecuteQueryOperator(
         task_id="load_fact_prices",
         sql=read_sql_query("loading", "load_fact_prices.sql"),
-        snowflake_conn_id="snowflake_predictit",
+        conn_id="snowflake_default",
     )
 
     # Set task dependencies
