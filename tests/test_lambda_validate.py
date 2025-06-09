@@ -7,9 +7,9 @@ from unittest.mock import patch, MagicMock
 
 @patch("lambda_validate.lambda_function.lambda_function")
 def test_lambda_handler_success(mock_lambda_func):
-    event = {"execution_timestamp": "20250101T120000Z"}
+    event = {"filename": "test_filename.json"}
     response = lambda_handler(event, None)
-    mock_lambda_func.assert_called_once_with("20250101T120000Z")
+    mock_lambda_func.assert_called_once_with("test_filename.json")
     assert response == {
         "StatusCode": 200,
         "message": "PredictAPI data successfully validated",
@@ -17,10 +17,10 @@ def test_lambda_handler_success(mock_lambda_func):
 
 
 @patch("lambda_validate.lambda_function.lambda_function")
-def test_lambda_handler_no_execution_timestamp(mock_lambda_func):
+def test_lambda_handler_no_filename(mock_lambda_func):
     event = {}
     with pytest.raises(
-        ValueError, match="Execution timestamp must be provided in the event data"
+        ValueError, match="Filename must be provided in the event data"
     ):
         lambda_handler(event, None)
 
@@ -28,14 +28,14 @@ def test_lambda_handler_no_execution_timestamp(mock_lambda_func):
 @patch("lambda_validate.lambda_function.os.getenv", return_value=None)
 def test_lambda_function_no_s3_bucket(mock_getenv):
     with pytest.raises(ValueError, match="S3_BUCKET environment variable is not set"):
-        lambda_function("20250101T120000Z")
+        lambda_function("test_filename.json")
 
 
 @patch("lambda_validate.lambda_function.os.getenv", return_value="fake-bucket")
 @patch("lambda_validate.lambda_function.s3_client")
 @patch("lambda_validate.lambda_function.PredictitResponse")
 def test_lambda_function_success(mock_predictit_response, mock_s3_client, mock_getenv):
-    test_execution_timestamp = "20250101T120000Z"
+    test_filename = "test_filename.json"
     test_data = {
         "markets": [
             {
@@ -60,7 +60,7 @@ def test_lambda_function_success(mock_predictit_response, mock_s3_client, mock_g
                         "displayOrder": 1.0,
                     }
                 ],
-                "timeStamp": test_execution_timestamp,
+                "timeStamp": test_filename,
                 "status": "active",
             }
         ]
@@ -69,23 +69,23 @@ def test_lambda_function_success(mock_predictit_response, mock_s3_client, mock_g
     mock_json_body.read.return_value = json.dumps(test_data).encode("utf-8")
     mock_s3_client.get_object.return_value = {"Body": mock_json_body}
 
-    lambda_function(test_execution_timestamp)
+    lambda_function(test_filename)
 
     mock_getenv.assert_called_once_with("S3_BUCKET")
     mock_s3_client.get_object.assert_called_once_with(
         Bucket="fake-bucket",
-        Key=f"predictit/stage/market_data_{test_execution_timestamp}.json",
+        Key=f"predictit/stage/{test_filename}",
     )
     mock_predictit_response.assert_called_once_with(**test_data)
     mock_s3_client.copy_object.assert_called_once_with(
         Bucket="fake-bucket",
         CopySource={
             "Bucket": "fake-bucket",
-            "Key": f"predictit/stage/market_data_{test_execution_timestamp}.json",
+            "Key": f"predictit/stage/{test_filename}",
         },
-        Key=f"predictit/raw_data/market_data_{test_execution_timestamp}.json",
+        Key=f"predictit/raw_data/{test_filename}",
     )
     mock_s3_client.delete_object.assert_called_once_with(
         Bucket="fake-bucket",
-        Key=f"predictit/stage/market_data_{test_execution_timestamp}.json",
+        Key=f"predictit/stage/{test_filename}",
     )
