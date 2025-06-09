@@ -1,8 +1,7 @@
 import pytest
 
 from lambda_fetch.lambda_function import lambda_function, lambda_handler
-from src.api import PredictitAPI
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 
 @patch("lambda_fetch.lambda_function.lambda_function")

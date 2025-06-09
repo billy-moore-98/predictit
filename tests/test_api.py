@@ -48,13 +48,16 @@ def test_store_to_s3_success():
     test_data = {"markets": []}
     predictit = PredictitAPI()
     expected_key = f"predictit/stage/{test_filename}"
-    predictit.store_to_s3(mock_s3, test_data, bucket=test_bucket, filename=test_filename)
+    predictit.store_to_s3(
+        mock_s3, test_data, bucket=test_bucket, filename=test_filename
+    )
     mock_s3.put_object.assert_called_once_with(
         Bucket=test_bucket,
         Key=expected_key,
         Body='{"markets": []}',
         ContentType="application/json",
     )
+
 
 def test_store_to_s3_failure():
     mock_s3 = MagicMock()
@@ -67,7 +70,9 @@ def test_store_to_s3_failure():
     test_filename = "test_file.json"
     predictit = PredictitAPI()
     with pytest.raises(ClientError):
-        predictit.store_to_s3(mock_s3, test_data, bucket=test_bucket, filename=test_filename)
+        predictit.store_to_s3(
+            mock_s3, test_data, bucket=test_bucket, filename=test_filename
+        )
 
     mock_s3.put_object.assert_called_once_with(
         Bucket=test_bucket,
