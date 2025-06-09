@@ -14,7 +14,6 @@ logger.setLevel(logging.INFO)
 class PredictitAPI:
     def __init__(self, base_url="https://www.predictit.org/api/marketdata"):
         self.base_url = base_url
-        self.s3_client = boto3.client("s3")
 
     def poll_market_data(self, market_id: Optional[str] = None) -> Optional[dict]:
         """
@@ -42,14 +41,14 @@ class PredictitAPI:
             logging.error(f"An error occurred: {e}")
 
     def store_to_s3(
-        self, data: dict, bucket: Optional[str] = None, filename: Optional[str] = None
+        self, s3_client: boto3.client, data: dict, bucket: Optional[str] = None, filename: Optional[str] = None
     ):
         if not filename:
             timestamp = datetime.datetime.utcnow().strftime("%Y-%m-%dT%H-%M-%S")
             filename = f"market_data_{timestamp}.json"
         key = f"predictit/stage/{filename}"
         try:
-            self.s3_client.put_object(
+            s3_client.put_object(
                 Bucket=bucket,
                 Key=key,
                 Body=json.dumps(data),

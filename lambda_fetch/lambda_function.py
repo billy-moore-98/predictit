@@ -26,7 +26,7 @@ def lambda_function(filename: str) -> None:
     bucket = os.getenv("S3_BUCKET")
     if not bucket:
         raise ValueError("S3_BUCKET environment variable is not set")
-    predictit.store_to_s3(data, bucket=bucket, filename=filename)
+    predictit.store_to_s3(s3_client, data, bucket=bucket, filename=filename)
     logging.info("Successfully stored data to S3")
 
 

@@ -41,16 +41,14 @@ def test_poll_market_http_error(mock_get, caplog):
     assert "HTTP error occurred" in caplog.text
 
 
-@patch("src.api.boto3.client")
-def test_store_to_s3_success(mock_boto_client):
+def test_store_to_s3_success():
     mock_s3 = MagicMock()
-    mock_boto_client.return_value = mock_s3
     test_bucket = "test-bucket"
     test_filename = "test_file.json"
     test_data = {"markets": []}
     predictit = PredictitAPI()
     expected_key = f"predictit/stage/{test_filename}"
-    predictit.store_to_s3(test_data, bucket=test_bucket, filename=test_filename)
+    predictit.store_to_s3(mock_s3, test_data, bucket=test_bucket, filename=test_filename)
     mock_s3.put_object.assert_called_once_with(
         Bucket=test_bucket,
         Key=expected_key,
@@ -58,11 +56,8 @@ def test_store_to_s3_success(mock_boto_client):
         ContentType="application/json",
     )
 
-
-@patch("src.api.boto3.client")
-def test_store_to_s3_failure(mock_boto_client):
+def test_store_to_s3_failure():
     mock_s3 = MagicMock()
-    mock_boto_client.return_value = mock_s3
     mock_s3.put_object.side_effect = ClientError(
         error_response={"Error": {"Code": "AccessDenied", "Message": "Access Denied"}},
         operation_name="PutObject",
@@ -72,7 +67,7 @@ def test_store_to_s3_failure(mock_boto_client):
     test_filename = "test_file.json"
     predictit = PredictitAPI()
     with pytest.raises(ClientError):
-        predictit.store_to_s3(test_data, bucket=test_bucket, filename=test_filename)
+        predictit.store_to_s3(mock_s3, test_data, bucket=test_bucket, filename=test_filename)
 
     mock_s3.put_object.assert_called_once_with(
         Bucket=test_bucket,

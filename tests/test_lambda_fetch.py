@@ -2,7 +2,7 @@ import pytest
 
 from lambda_fetch.lambda_function import lambda_function, lambda_handler
 from src.api import PredictitAPI
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 
 
 @patch("lambda_fetch.lambda_function.lambda_function")
@@ -24,17 +24,17 @@ def test_lambda_handler_no_filename(mock_lambda_func):
 
 
 @patch("lambda_fetch.lambda_function.os.getenv")
-@patch.object(PredictitAPI, "store_to_s3")
-@patch.object(PredictitAPI, "poll_market_data")
-def test_lambda_function_success(mock_poll, mock_store, mock_getenv):
-    mock_poll.return_value = {"markets": []}
+@patch("lambda_fetch.lambda_function.predictit")
+@patch("lambda_fetch.lambda_function.s3_client")
+def test_lambda_function_success(mock_s3_client, mock_predictit, mock_getenv):
     mock_getenv.return_value = "fake-bucket"
+    mock_predictit.poll_market_data.return_value = {"markets": []}
 
     lambda_function("test.json")
 
-    mock_poll.assert_called_once()
-    mock_store.assert_called_once_with(
-        {"markets": []}, bucket="fake-bucket", filename="test.json"
+    mock_predictit.poll_market_data.assert_called_once()
+    mock_predictit.store_to_s3.assert_called_once_with(
+        mock_s3_client, {"markets": []}, bucket="fake-bucket", filename="test.json"
     )
 
 
