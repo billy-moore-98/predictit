@@ -6,6 +6,7 @@ from airflow.operators.empty import EmptyOperator
 from airflow.providers.amazon.aws.operators.lambda_function import (
     LambdaInvokeFunctionOperator,
 )
+from airflow.operators.trigger_dagrun import TriggerDagRunOperator
 
 lambda_function_fetch_name = "predictit-fetch"
 lambda_function_validate_name = "predictit-validate"
@@ -21,7 +22,7 @@ def build_lambda_payload(**kwargs):
 
 @dag(
     dag_id="fetch",
-    schedule_interval="@daily",
+    schedule_interval="@hourly",
     start_date=datetime.datetime(2025, 1, 1),
     catchup=False,
     default_args={
@@ -51,16 +52,13 @@ def fetch_dag():
         payload=lambda_payload,
     )
 
-    # trigger_snowflake_ingestion = TriggerDagRunOperator(
-    #     task_id="trigger_snowflake_ingestion",
-    #     trigger_dag_id="ingest",
-    #     conf={"execution_timestamp": "{{ ts_nodash }}"},
-    # )
-
-    (
-        initiate >> lambda_fetch >> lambda_validate
-        # >> trigger_snowflake_ingestion
+    trigger_snowflake_ingestion = TriggerDagRunOperator(
+        task_id="trigger_snowflake_ingestion",
+        trigger_dag_id="ingest",
+        conf={"execution_timestamp": "{{ ts_nodash }}"},
     )
+
+    (initiate >> lambda_fetch >> lambda_validate >> trigger_snowflake_ingestion)
 
 
 dag = fetch_dag()
