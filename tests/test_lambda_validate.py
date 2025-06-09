@@ -19,9 +19,7 @@ def test_lambda_handler_success(mock_lambda_func):
 @patch("lambda_validate.lambda_function.lambda_function")
 def test_lambda_handler_no_filename(mock_lambda_func):
     event = {}
-    with pytest.raises(
-        ValueError, match="Filename must be provided in the event data"
-    ):
+    with pytest.raises(ValueError, match="Filename must be provided in the event data"):
         lambda_handler(event, None)
 
 
