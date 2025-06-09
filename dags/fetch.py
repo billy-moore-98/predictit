@@ -3,17 +3,21 @@ import json
 
 from airflow.decorators import dag, task
 from airflow.operators.empty import EmptyOperator
-from airflow.providers.amazon.aws.operators.lambda_function import LambdaInvokeFunctionOperator
+from airflow.providers.amazon.aws.operators.lambda_function import (
+    LambdaInvokeFunctionOperator,
+)
 
-lambda_function_fetch_name = 'predictit-fetch'
-lambda_function_validate_name = 'predictit-validate'
+lambda_function_fetch_name = "predictit-fetch"
+lambda_function_validate_name = "predictit-validate"
+
 
 # must define tasks to build the lambda payloads as we cannot use Airflow templating and
-# serialise to json in the same step 
+# serialise to json in the same step
 @task
 def build_lambda_payload(**kwargs):
     filename = f"market_data_{kwargs['ts_nodash']}.json"
     return json.dumps({"filename": filename})
+
 
 @dag(
     dag_id="fetch",
@@ -22,8 +26,8 @@ def build_lambda_payload(**kwargs):
     catchup=False,
     default_args={
         "owner": "Billy Moore",
-        #"retries": 1,
-        #"retry_delay": datetime.timedelta(minutes=1),
+        # "retries": 1,
+        # "retry_delay": datetime.timedelta(minutes=1),
         "depends_on_past": False,
         "email_on_failure": False,
         "email_on_retry": False,
@@ -54,9 +58,7 @@ def fetch_dag():
     # )
 
     (
-        initiate
-        >> lambda_fetch
-        >> lambda_validate
+        initiate >> lambda_fetch >> lambda_validate
         # >> trigger_snowflake_ingestion
     )
 
