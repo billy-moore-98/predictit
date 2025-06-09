@@ -2,86 +2,88 @@ import datetime
 import json
 import os
 
-from airflow import DAG
-from airflow.operators.dagrun import TriggerDagRunOperator
+from airflow.decorators import dag, task
+from airflow.operators.trigger_dagrun import TriggerDagRunOperator
 from airflow.operators.empty import EmptyOperator
-from airflow.operators.python import PythonOperator
-from airflow.providers.amazon.aws.operators.lambda_function import (
-    AwsLambdaInvokeFunctionOperator,
-)
+from airflow.providers.amazon.aws.operators.lambda_function import LambdaInvokeFunctionOperator
 
-lambda_function_fetch_name = os.getenv("LAMBDA_FUNCTION_FETCH_NAME")
-lambda_function_validate_name = os.getenv("LAMBDA_FUNCTION_VALIDATE_NAME")
+lambda_function_fetch_name = 'predictit-fetch'
+lambda_function_validate_name = 'predictit-validate'
 
-default_args = {
-    "owner": "Billy Moore",
-    "retries": 1,
-    "retry_delay": datetime.timedelta(minutes=1),
-    "depends_on_past": False,
-    "email_on_failure": False,
-    "email_on_retry": False,
-}
+@task
+def check_lambda_result(lambda_result: str):
+    lambda_result = json.loads(lambda_result)
+    if not lambda_result:
+        raise ValueError("No result returned from Lambda")
+    status = lambda_result.get("StatusCode")
+    if status != 200:
+        raise ValueError(f"Lambda returned non-200 status code: {status}")
+    return True
 
+# must define tasks to build the lambda payloads as we cannot use Airflow templating and
+# serialise to json in the same step 
+@task
+def build_fetch_payload(**kwargs):
+    filename = f"market_data_{kwargs['ts_nodash']}.json"
+    return json.dumps({"filename": filename})
 
-# callable to check the result of lambda functions
-def check_lambda_result(task_id, **context):
-    result = context["ti"].xcom_pull(task_ids=task_id)
-    if result is None:
-        raise ValueError(f"Lambda function {task_id} failed to return a result.")
-    payload = result.get("Payload")
-    if payload:
-        response = json.loads(payload.read())
-        if response.get("StatusCode") != 200:
-            raise ValueError(
-                f"Lambda function {task_id} failed with status code: {response.get('StatusCode')}"
-            )
-    else:
-        raise ValueError(f"Lambda function {task_id} returned no payload.")
+@task
+def build_validate_payload(**kwargs):
+    execution_timestamp = kwargs['ts_nodash']
+    return json.dumps({'execution_timestamp': execution_timestamp})
 
-
-with DAG(
+@dag(
     dag_id="fetch",
-    default_args=default_args,
+    schedule_interval="@daily",
+    start_date=datetime.datetime(2025, 1, 1),
     catchup=False,
-    schedule_interval="@hourly",
-) as dag:
+    default_args={
+        "owner": "Billy Moore",
+        #"retries": 1,
+        #"retry_delay": datetime.timedelta(minutes=1),
+        "depends_on_past": False,
+        "email_on_failure": False,
+        "email_on_retry": False,
+    },
+    tags=["lambda", "fetch", "validate"],
+)
+def fetch_dag():
     initiate = EmptyOperator(task_id="initiate")
 
-    lambda_fetch = AwsLambdaInvokeFunctionOperator(
+    fetch_payload = build_fetch_payload()
+
+    validate_payload = build_validate_payload()
+
+    lambda_fetch = LambdaInvokeFunctionOperator(
         task_id="lambda_fetch",
         function_name=lambda_function_fetch_name,
-        payload={"filename": "market_data_{{ ts_nodash }}.json"},
+        payload=fetch_payload,
     )
 
-    check_fetch = PythonOperator(
-        task_id="check_fetch",
-        python_callable=check_lambda_result,
-        op_kwargs={"task_id": "lambda_fetch"},
-    )
-
-    lambda_validate = AwsLambdaInvokeFunctionOperator(
+    lambda_validate = LambdaInvokeFunctionOperator(
         task_id="lambda_validate",
         function_name=lambda_function_validate_name,
-        payload={"filename": "market_data_{{ ts_nodash }}.json"},
+        payload=validate_payload,
     )
 
-    check_validate = PythonOperator(
-        task_id="check_validate",
-        python_callable=check_lambda_result,
-        op_kwargs={"task_id": "lambda_validate"},
-    )
+    # trigger_snowflake_ingestion = TriggerDagRunOperator(
+    #     task_id="trigger_snowflake_ingestion",
+    #     trigger_dag_id="ingest",
+    #     conf={"execution_timestamp": "{{ ts_nodash }}"},
+    # )
 
-    trigger_snowflake_ingestion = TriggerDagRunOperator(
-        task_id="trigger_snowflake_ingestion",
-        trigger_dag_id="ingest",
-        conf={"execution_timestamp": "{{ ts_nodash }}"},
-    )
+    # Wire tasks together
+    fetch_result_check = check_lambda_result(lambda_fetch.output)
+    validate_result_check = check_lambda_result(lambda_validate.output)
 
     (
         initiate
         >> lambda_fetch
-        >> check_fetch
+        >> fetch_result_check
         >> lambda_validate
-        >> check_validate
-        >> trigger_snowflake_ingestion
+        >> validate_result_check
+        # >> trigger_snowflake_ingestion
     )
+
+
+dag = fetch_dag()
