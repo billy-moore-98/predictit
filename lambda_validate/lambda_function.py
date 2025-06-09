@@ -12,7 +12,7 @@ logger.setLevel(logging.INFO)
 s3_client = boto3.client("s3")
 
 
-def lambda_function(execution_timestamp: str):
+def lambda_function(filename: str):
     """
     Lambda function to validate the PredictIt API data stored in S3
 
@@ -24,8 +24,8 @@ def lambda_function(execution_timestamp: str):
     bucket = os.getenv("S3_BUCKET")
     if not bucket:
         raise ValueError("S3_BUCKET environment variable is not set")
-    source_key = f"predictit/stage/market_data_{execution_timestamp}.json"
-    destination_key = f"predictit/raw_data/market_data_{execution_timestamp}.json"
+    source_key = f"predictit/stage/{filename}.json"
+    destination_key = f"predictit/raw_data/{filename}.json"
     # Load the data from S3
     s3_object = s3_client.get_object(Bucket=bucket, Key=source_key)
     data = json.loads(s3_object["Body"].read())
@@ -58,10 +58,10 @@ def lambda_handler(event, context) -> Optional[dict]:
         Dict status message
     """
     try:
-        execution_timestamp = event.get("execution_timestamp")
-        if not execution_timestamp:
-            raise ValueError("Execution timestamp must be provided in the event data")
-        lambda_function(execution_timestamp)
+        filename = event.get("filename")
+        if not filename:
+            raise ValueError("Filename must be provided in the event data")
+        lambda_function(filename)
         return {"StatusCode": 200, "message": "PredictAPI data successfully validated"}
     except Exception as e:
         logger.error(f"Error occurred: {e}")

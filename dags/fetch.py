@@ -13,14 +13,9 @@ lambda_function_validate_name = 'predictit-validate'
 # must define tasks to build the lambda payloads as we cannot use Airflow templating and
 # serialise to json in the same step 
 @task
-def build_fetch_payload(**kwargs):
+def build_lambda_payload(**kwargs):
     filename = f"market_data_{kwargs['ts_nodash']}.json"
     return json.dumps({"filename": filename})
-
-@task
-def build_validate_payload(**kwargs):
-    execution_timestamp = kwargs['ts_nodash']
-    return json.dumps({'execution_timestamp': execution_timestamp})
 
 @dag(
     dag_id="fetch",
@@ -40,20 +35,18 @@ def build_validate_payload(**kwargs):
 def fetch_dag():
     initiate = EmptyOperator(task_id="initiate")
 
-    fetch_payload = build_fetch_payload()
-
-    validate_payload = build_validate_payload()
+    lambda_payload = build_lambda_payload()
 
     lambda_fetch = LambdaInvokeFunctionOperator(
         task_id="lambda_fetch",
         function_name=lambda_function_fetch_name,
-        payload=fetch_payload,
+        payload=lambda_payload,
     )
 
     lambda_validate = LambdaInvokeFunctionOperator(
         task_id="lambda_validate",
         function_name=lambda_function_validate_name,
-        payload=validate_payload,
+        payload=lambda_payload,
     )
 
     # trigger_snowflake_ingestion = TriggerDagRunOperator(
