@@ -10,16 +10,6 @@ from airflow.providers.amazon.aws.operators.lambda_function import LambdaInvokeF
 lambda_function_fetch_name = 'predictit-fetch'
 lambda_function_validate_name = 'predictit-validate'
 
-@task
-def check_lambda_result(lambda_result: str):
-    lambda_result = json.loads(lambda_result)
-    if not lambda_result:
-        raise ValueError("No result returned from Lambda")
-    status = lambda_result.get("StatusCode")
-    if status != 200:
-        raise ValueError(f"Lambda returned non-200 status code: {status}")
-    return True
-
 # must define tasks to build the lambda payloads as we cannot use Airflow templating and
 # serialise to json in the same step 
 @task
@@ -72,16 +62,10 @@ def fetch_dag():
     #     conf={"execution_timestamp": "{{ ts_nodash }}"},
     # )
 
-    # Wire tasks together
-    fetch_result_check = check_lambda_result(lambda_fetch.output)
-    validate_result_check = check_lambda_result(lambda_validate.output)
-
     (
         initiate
         >> lambda_fetch
-        >> fetch_result_check
         >> lambda_validate
-        >> validate_result_check
         # >> trigger_snowflake_ingestion
     )
 
