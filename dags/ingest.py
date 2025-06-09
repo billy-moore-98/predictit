@@ -1,61 +1,73 @@
 import datetime
-
-from airflow import DAG
-from airflow.providers.snowflake.operators.snowflake import SnowflakeOperator
 from pathlib import Path
 
-default_args = {
-    "owner": "Billy Moore",
-    "retries": 1,
-    "retry_delay": datetime.timedelta(minutes=1),
-    "depends_on_past": False,
-    "email_on_failure": False,
-    "email_on_retry": False,
-}
+from airflow.decorators import dag, task
+from airflow.providers.snowflake.operators.snowflake import SnowflakeOperator
 
 
 def read_sql_query(dir: str, name: str) -> str:
     dag_dir = Path(__file__).parent
     sql_path = dag_dir / "sql" / dir / name
     with open(sql_path, "r") as f:
-        sql = f.read()
-    return sql
+        return f.read()
 
 
-with DAG(dag_id="ingest", default_args=default_args):
+@dag(
+    dag_id="ingest",
+    start_date=datetime.datetime(2025, 1, 1),
+    schedule_interval=None,
+    catchup=False,
+    default_args={
+        "owner": "Billy Moore",
+        "retries": 1,
+        "retry_delay": datetime.timedelta(minutes=1),
+        "depends_on_past": False,
+        "email_on_failure": False,
+        "email_on_retry": False,
+    },
+    tags=["snowflake", "predictit"],
+)
+def ingest_dag():
     execution_timestamp = "{{ dag_run.conf['execution_timestamp'] }}"
 
-    def snowflake_task_factory(
-        task_id: str, filename: str, timestamp_param: bool = False
-    ):
-        return SnowflakeOperator(
-            task_id=task_id,
-            sql=read_sql_query("loading", filename),
-            snowflake_conn_id="snowflake_predictit",
-            params={"execution_timestamp": execution_timestamp}
-            if timestamp_param
-            else {},
-        )
-
-    load_stage_raw = snowflake_task_factory(
-        "load_stage_raw", "load_stage_raw.sql", timestamp_param=True
-    )
-    load_stg_dim_markets = snowflake_task_factory(
-        "load_stg_dim_markets", "load_stg_dim_markets.sql"
-    )
-    load_dim_markets = snowflake_task_factory(
-        "load_dim_markets", "load_dim_markets.sql"
-    )
-    load_stg_dim_contracts = snowflake_task_factory(
-        "load_stg_dim_contracts", "load_stg_dim_contracts.sql"
-    )
-    load_dim_contracts = snowflake_task_factory(
-        "load_dim_contracts", "load_dim_contracts.sql"
-    )
-    load_fact_prices = snowflake_task_factory(
-        "load_fact_prices", "load_fact_prices.sql"
+    load_stage_raw = SnowflakeOperator(
+        task_id="load_stage_raw",
+        sql=read_sql_query("loading", "load_stage_raw.sql"),
+        snowflake_conn_id="snowflake_predictit",
+        params={"execution_timestamp": execution_timestamp},
     )
 
+    load_stg_dim_markets = SnowflakeOperator(
+        task_id="load_stg_dim_markets",
+        sql=read_sql_query("loading", "load_stg_dim_markets.sql"),
+        snowflake_conn_id="snowflake_predictit",
+    )
+
+    load_dim_markets = SnowflakeOperator(
+        task_id="load_dim_markets",
+        sql=read_sql_query("loading", "load_dim_markets.sql"),
+        snowflake_conn_id="snowflake_predictit",
+    )
+
+    load_stg_dim_contracts = SnowflakeOperator(
+        task_id="load_stg_dim_contracts",
+        sql=read_sql_query("loading", "load_stg_dim_contracts.sql"),
+        snowflake_conn_id="snowflake_predictit",
+    )
+
+    load_dim_contracts = SnowflakeOperator(
+        task_id="load_dim_contracts",
+        sql=read_sql_query("loading", "load_dim_contracts.sql"),
+        snowflake_conn_id="snowflake_predictit",
+    )
+
+    load_fact_prices = SnowflakeOperator(
+        task_id="load_fact_prices",
+        sql=read_sql_query("loading", "load_fact_prices.sql"),
+        snowflake_conn_id="snowflake_predictit",
+    )
+
+    # Set task dependencies
     (
         load_stage_raw
         >> load_stg_dim_markets
@@ -64,3 +76,6 @@ with DAG(dag_id="ingest", default_args=default_args):
         >> load_dim_contracts
         >> load_fact_prices
     )
+
+
+dag = ingest_dag()
