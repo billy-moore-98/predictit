@@ -3,24 +3,8 @@ name: Test and deploy
 on:
   push:
     branches: [ "main" ]
-    paths:
-      - 'src/**'
-      - 'tests/**'
-      - 'lambda_fetch/**'
-      - 'lambda_validate/**'
-      - '.github/workflows/test_and_deploy.yml'
-      - '.github/workflows/test.yml'
-      - '.github/workflows/deploy_lambdas.yml'
   pull_request:
     branches: [ "main" ]
-    paths:
-      - 'src/**'
-      - 'tests/**'
-      - 'lambda_fetch/**'
-      - 'lambda_validate/**'
-      - '.github/workflows/test_and_deploy.yml'
-      - '.github/workflows/test.yml'
-      - '.github/workflows/deploy_lambdas.yml'
 
 concurrency:
   group: ${{ github.ref }}   
