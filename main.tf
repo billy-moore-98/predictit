@@ -18,7 +18,7 @@ module "iam" {
 
 module "s3_bucket" {
   source = "./infrastructure/aws/s3"
-  s3_bucket_name = data.aws_ssm_parameter.s3_bucket.value
+  s3_bucket_name = var.s3_bucket_name
 }
 
 resource "aws_lambda_function" "lambda_fetch" {
