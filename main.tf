@@ -11,17 +11,14 @@ provider "aws" {
   region = "eu-west-2"
 }
 
-resource "aws_s3_bucket" "predictit_bucket" {
-  bucket = data.aws_ssm_parameter.s3_bucket.value
-
-  tags = {
-    project = "predictit"
-  }
-}
-
 module "iam" {
   source = "./infrastructure/aws/iam"
   lambda_ex_role_name = "lambda_ex"
+}
+
+module "s3_bucket" {
+  source = "./infrastructure/aws/s3"
+  s3_bucket_name = data.aws_ssm_parameter.s3_bucket.value
 }
 
 resource "aws_lambda_function" "lambda_fetch" {
@@ -35,7 +32,7 @@ resource "aws_lambda_function" "lambda_fetch" {
 
   environment {
     variables = {
-        S3_BUCKET = data.aws_ssm_parameter.s3_bucket.value
+        S3_BUCKET = module.s3_bucket.s3_bucket_name
     }
   }
 
@@ -69,7 +66,7 @@ resource "aws_lambda_function" "lambda_validate" {
 
   environment {
     variables = {
-        S3_BUCKET = data.aws_ssm_parameter.s3_bucket.value
+        S3_BUCKET = module.s3_bucket.s3_bucket_name
     }
   }
 
