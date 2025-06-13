@@ -4,11 +4,13 @@
 
 This project implements a batch data ingestion pipeline that polls the [Predictit](https://www.predictit.org/) API for US political odds data. The goal is to demonstrate a production-ready system using a modern data stack tooling that can be used to generate analysis and identify trends.
 
-The project follows a microservices architecture pattern with code processing services deployed as AWS Lambda functions, raw data stored in S3 and modelled data loaded into Snowflake. The pipeline is orchestrated using Airflow into a fetch and ingestion DAG. AWS infrastructure is managed using Terraform, and CI/CD is enabled using GitHub Actions ensuring robust code which is immediately deployed.
+The project follows a microservices architecture pattern with code processing services deployed as AWS Lambda functions, raw data stored in S3 and processed data loaded into Snowflake and transformed for downstream analytics. The pipeline is orchestrated using Airflow into 2 DAGs for modularity: fetch and ingest, with fetch triggering ingest after successful completion.
+
+AWS infrastructure is managed using Terraform and CI/CD is undertaken using GitHub Actions, ensuring reusable cloud infrastructure and robust code which is immediately deployed.
 
 ## Tech Stack
 
-- 🐍 Python: API client, response valiation & Lambda logic
+- 🐍 Python: API client, response validation & Lambda logic
 - ☁️ AWS S3: Raw and validated data storage
 - 🧬 AWS Lambda: Stateless functions for API fetching & validation
 - ❄️ Snowflake: Data warehouse
@@ -33,10 +35,12 @@ predictit/
 │   ├── fetch.py                  # DAG to fetch data from PredictIt API
 │   ├── ingest.py                 # DAG to ingest data into Snowflake
 │   └── sql/                      # Snowflake SQL scripts (DDL/COPY INTO/etc.)
-│                                 # Note: SQL files have been placed here due to MWAA directory structure
+│                                 # Note: SQL files have been placed here due to MWAA directory
+│                                    structure requirements
 │
 ├── docs/                         # Documentation and diagrams
 │   └── architecture-diagram.png  # Pipeline architecture diagram
+│   └── predictit_markets_erd.png # Date model entity relationship diagram
 │
 ├── infrastructure/aws            # Terraform modules
 │   ├── iam/                      # IAM roles and permissions
@@ -59,14 +63,12 @@ predictit/
 │   └── __init__.py
 │   ├── api.py                    # API fetch and request logic
 │   ├── validate.py               # API response validation schema definitions
-
 │
 ├── tests/                        # Unit tests
 │   └── __init__.py
 │   ├── test_api.py
 │   ├── test_lambda_fetch.py
 │   ├── test_lambda_validate.py
-
 │
 ├── main.tf                       # Root Terraform entry point
 ├── variables.tf                  # Terraform variables
@@ -76,27 +78,27 @@ predictit/
 
 - `lambda_fetch` and `lambda_validate` are containerised AWS Lambda functions built with Docker and deployed via ECR repos
 - `src/` contains the Python source code for API fetching and validation logic
-- `tests` contains unit tests for key modules built using pytest
-- `infrastructure` contains Terraform modules to provision the AWS infrastructure
-- `.github` contains CI/CD pipelines ro tun tests, build and push images and deploy to AWS
+- `tests/` contains unit tests for key modules built using pytest
+- `infrastructure/` contains Terraform modules to provision the AWS infrastructure
+- `.github/workflows` contains CI/CD pipelines tun tests, build and push images and deploy to AWS
 
 ## Pipeline Flow
 
 1. **lambda_fetch** fetches the latest data from the Predictit API and stores to a staging layer in an S3 bucket
 2. **lambda_validate** picks up the staged response and validates it against the expected JSON pattern, moving to a raw storage layer if valid
 3. **Snowflake** SQL scripts copy and flatten the JSON file to a staging table, and populates the data warehouse model with new data
-4. **Transformation** SQL scripts are run to generate sample analysis reports
+4. **Analytical** SQL queries are available to generate sample analysis reports
 5. **Airflow** is used to schedule and orchestrate the pipeline from fetching to analysis
 
 ## Data Model
 
-The PredictIt data provides odds on answers to various political questions such as "Who will be the next president of the USA?". The questions are called "markets", and the answers to the markets being "contracts". Users "trade" (bet) on the various outcomes, influencing the trading price. Markets can open and close at any time, and contracts can be opened or closed at any time.
+The Predictit data provides odds on answers to various political questions such as "Who will be the next president of the USA?". The questions are called "markets", and the answers to the markets being "contracts". Users "trade" (bet) on the various outcomes, influencing the trading price (odds). Markets can open and close at any time, and contracts can be opened or closed at any time. Below is the modelled ER diagram for the data. 
 
 ![Data Model](docs/predictit_markets_erd.png)
 
-Below is the modelled ER diagram for the data. Consisting of two type 1 slowly changing dimension tables and a central fact table. SQL merge statements cover the opening and closing of markets/contracts, indicated by the `EFFECTIVE_TS` and `EXPIRY_TS` columns. The central fact_prices table then has all the columns necessary to generate any kind of anaylsis.
+The model consists of two type 1 slowly changing dimension tables and a central fact table. SQL merge statements cover the opening and closing of markets/contracts, indicated by the `EFFECTIVE_TS` and `EXPIRY_TS` columns. The central `FACT_PRICES` table then has all the columns necessary to generate any kind of analysis.
 
-The data warehouse loading strategy is covered by the ingest pipeline. An incremental load of both dimension and fact tables from staging tables is used, with MERGE INTO statements used to load dimensions tables and a simple INSERT INTO statement for new price data. Please consult the SQL files for specific code. An example loading strategy for DIM_CONTRACTS is shown below.
+The data warehouse loading strategy is covered by the ingest pipeline. An incremental load of both dimension and fact tables from staging tables is used, with `MERGE INTO` statements loading dimensions tables and an `INSERT INTO` statement for new price data. Please consult the SQL files for specific code. An example loading strategy for `DIM_CONTRACTS` is shown below.
 
 ```sql
 MERGE INTO markets.dim_contracts AS tgt
@@ -147,14 +149,14 @@ The infrastructure contains the following resources:
 
 The AWS infra is split into IAM, Lambdas and S3 modules. To set up the infrastructure you will need an AWS account and the AWS CLI set up with relevant credentials. Terraform documentation can be found [here](https://registry.terraform.io/providers/hashicorp/aws/latest/docs#authentication-and-configuration).
 
-To set up Terraform ensure you have created a ```terraform.tfvars``` file at the project root with an s3_bucket_name variable to name the bucket for storage. Then run:
+To set up Terraform ensure you have created a ```terraform.tfvars``` file at the project root with an `s3_bucket_name` variable to name the bucket for storage. Then run:
 ```bash
 terraform init
 ```
 
 ### Bootstrapping the Infra
 
-As a dependency exists between the ECR repos and the lambda functions as the functions use images within the repos. You therefore must first create the ECR repos. Follow these steps:
+A dependency exists between the ECR repos and the lambda functions as the functions use the latest images within the repos. You therefore must first create the ECR repos. Follow these steps:
 
 1. Provision ECR repos only
 
@@ -166,7 +168,11 @@ terraform apply \
 2. Build and push Docker images to ECR's (e.g. for lambda_fetch)
 
 ```bash
-docker buildx build --platform linux/amd64 --provenance=false -t lambda_fetch -f ./lambda_fetch/Dockerfile .
+docker buildx build \
+ --platform linux/amd64 \
+ --provenance=false \
+ -t lambda_fetch \
+ -f ./lambda_fetch/Dockerfile .
 aws ecr get-login-password | docker login --username AWS --password-stdin <account>.dkr.ecr.<region>.amazonaws.com
 docker tag lambda_fetch <ecr_repo_uri>:latest
 docker push <ecr_repo_uri>:latest
