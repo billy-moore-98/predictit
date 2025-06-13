@@ -109,7 +109,7 @@ The infrastructure contains the following resources:
 - predictit_fetch and predictit_validate lambda functions
 - predictit_fetch and predictit_validate ECR repositories for lambda function images
 
-The AWS infra is split into IAM, Lambdas and S3 modules. To set up the infrastructure you will the AWS CLI set up with relevant credentials. Terraform documentation can be found [here](https://registry.terraform.io/providers/hashicorp/aws/latest/docs#authentication-and-configuration).
+The AWS infra is split into IAM, Lambdas and S3 modules. To set up the infrastructure you will need an AWS account and the AWS CLI set up with relevant credentials. Terraform documentation can be found [here](https://registry.terraform.io/providers/hashicorp/aws/latest/docs#authentication-and-configuration).
 
 To set up Terraform ensure you have created a ```terraform.tfvars``` file at the project root with an s3_bucket_name variable to name the bucket for storage. Then run:
 ```bash
@@ -141,6 +141,10 @@ docker push <ecr_repo_uri>:latest
 ```bash
 terraform apply
 ```
+
+### Snowflake
+
+Snowflake DDL setup can be found at ```./dags/sql/setup```. One point of note is setting up of the storage integration to S3. Follow the relevant Snowflake docs to do this. Once set up the SQL statements can be ran to create the database, schema, storage integration, file format, stage and tables.
 
 ## Orchestration
 
