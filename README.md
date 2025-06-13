@@ -37,7 +37,7 @@ predictit/
 ├── docs/                         # Documentation and diagrams
 │   └── architecture-diagram.png  # Pipeline architecture diagram
 │
-├── infrastructure/               # Terraform modules
+├── infrastructure/aws            # Terraform modules
 │   ├── iam/                      # IAM roles and permissions
 │   ├── lambdas/                  # Lambda deployment resources
 │   └── s3/                       # S3 bucket
