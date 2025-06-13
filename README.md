@@ -2,7 +2,7 @@
 
 ## Overview
 
-This project implements a batch data ingestion pipeline that polls the PredictitAPI for US political odds data. The goal is to demonstrate a production-ready system using a modern data stack tooling that can be used to generate analysis and identify trends.
+This project implements a batch data ingestion pipeline that polls the [Predictit](https://www.predictit.org/) API for US political odds data. The goal is to demonstrate a production-ready system using a modern data stack tooling that can be used to generate analysis and identify trends.
 
 The project follows a microservices architecture pattern with code processing services deployed as AWS Lambda functions, raw data stored in S3 and modelled data loaded into Snowflake. The pipeline is orchestrated using Airflow into a fetch and ingestion DAG. AWS infrastructure is managed using Terraform, and CI/CD is enabled using GitHub Actions ensuring robust code which is immediately deployed.
 
@@ -33,6 +33,7 @@ predictit/
 │   ├── fetch.py                  # DAG to fetch data from PredictIt API
 │   ├── ingest.py                 # DAG to ingest data into Snowflake
 │   └── sql/                      # Snowflake SQL scripts (DDL/COPY INTO/etc.)
+│                                 # Note: SQL files have been placed here due to MWAA directory structure
 │
 ├── docs/                         # Documentation and diagrams
 │   └── architecture-diagram.png  # Pipeline architecture diagram
@@ -86,6 +87,41 @@ predictit/
 3. **Snowflake** SQL scripts copy and flatten the JSON file to a staging table, and populates the data warehouse model with new data
 4. **Transformation** SQL scripts are run to generate sample analysis reports
 5. **Airflow** is used to schedule and orchestrate the pipeline from fetching to analysis
+
+## Data Model
+
+The PredictIt data provides odds on answers to various political questions such as "Who will be the next president of the USA?". The questions are called "markets", and the answers to the markets being "contracts". Users "trade" (bet) on the various outcomes, influencing the trading price. Markets can open and close at any time, and contracts can be opened or closed at any time.
+
+![Data Model](docs/predictit_markets_erd.png)
+
+Below is the modelled ER diagram for the data. Consisting of two type 1 slowly changing dimension tables and a central fact table. SQL merge statements cover the opening and closing of markets/contracts, indicated by the `EFFECTIVE_TS` and `EXPIRY_TS` columns. The central fact_prices table then has all the columns necessary to generate any kind of anaylsis.
+
+The data warehouse loading strategy is covered by the ingest pipeline. An incremental load of both dimension and fact tables from staging tables is used, with MERGE INTO statements used to load dimensions tables and a simple INSERT INTO statement for new price data. Please consult the SQL files for specific code. An example loading strategy for DIM_CONTRACTS is shown below.
+
+```sql
+MERGE INTO markets.dim_contracts AS tgt
+USING markets.stg_dim_contracts AS src
+ON src.id = tgt.id
+WHEN MATCHED AND src.date_end IS NOT NULL AND tgt.expiry_ts IS NULL THEN
+    UPDATE SET
+        tgt.expiry_ts = src.date_end,
+        tgt.is_open = FALSE
+WHEN NOT MATCHED THEN
+    INSERT (
+        id,
+        market_id,
+        name,
+        short_name,
+        effective_ts
+    )
+    VALUES (
+        src.id,
+        src.market_id,
+        src.name,
+        src.short_name,
+        CURRENT_TIMESTAMP
+    );
+```
 
 ## Testing
 
