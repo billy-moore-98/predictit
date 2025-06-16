@@ -98,6 +98,12 @@ The Predictit data provides odds on answers to various political questions such 
 
 The model consists of two type 1 slowly changing dimension tables and a central fact table. SQL merge statements cover the opening and closing of markets/contracts, indicated by the `EFFECTIVE_TS` and `EXPIRY_TS` columns. The central `FACT_PRICES` table then has all the columns necessary to generate any kind of analysis.
 
+Some design choices taken:
+- FACT_PRICES.MARKET_ID is not strictly necessary as MARKET_ID can be derived from DIM_CONTRACTS
+- To reflect a real-world system however, some denormalisation has been justified for performance
+- In big data systems, this leads to less joins and faster query performance
+- To enforce data integrity, a check constraint can be placed on FACT_PRICES.MARKET_ID = DIM_CONTRACTS.MARKET_ID
+
 The data warehouse loading strategy is covered by the ingest pipeline. An incremental load of both dimension and fact tables from staging tables is used, with `MERGE INTO` statements loading dimensions tables and an `INSERT INTO` statement for new price data. Please consult the SQL files for specific code. An example loading strategy for `DIM_CONTRACTS` is shown below.
 
 ```sql
