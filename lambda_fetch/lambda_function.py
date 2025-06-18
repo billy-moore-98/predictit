@@ -29,10 +29,7 @@ def lambda_function(filename: str) -> None:
         raise ValueError("S3_BUCKET environment variable is not set")
     key = f"predictit/stage/{filename}"
     s3_client.put_object(
-        Bucket=bucket,
-        Key=key,
-        Body=json.dumps(data),
-        ContentType="application/json"
+        Bucket=bucket, Key=key, Body=json.dumps(data), ContentType="application/json"
     )
     logging.info("Successfully stored data to S3")
 

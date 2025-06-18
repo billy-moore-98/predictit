@@ -1,10 +1,6 @@
-import boto3
-import datetime
-import json
 import logging
 import requests
 
-from botocore.exceptions import ClientError
 from typing import Optional
 
 from .validate import PredictitResponse
