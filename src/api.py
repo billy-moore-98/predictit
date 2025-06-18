@@ -51,26 +51,3 @@ class PredictitAPI:
         except Exception as e:
             logger.error(f"Validation failed: {e}")
             raise
-
-    def store_to_s3(
-        self,
-        s3_client: boto3.client,
-        data: dict,
-        bucket: Optional[str] = None,
-        filename: Optional[str] = None,
-    ):
-        if not filename:
-            timestamp = datetime.datetime.utcnow().strftime("%Y-%m-%dT%H-%M-%S")
-            filename = f"market_data_{timestamp}.json"
-        key = f"predictit/stage/{filename}"
-        try:
-            s3_client.put_object(
-                Bucket=bucket,
-                Key=key,
-                Body=json.dumps(data),
-                ContentType="application/json",
-            )
-            logger.info(f"Uploaded {key} to S3 bucket {bucket}")
-        except ClientError as e:
-            logger.error(f"Failed to upload to bucket: {e}")
-            raise
