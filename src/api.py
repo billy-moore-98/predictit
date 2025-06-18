@@ -42,6 +42,16 @@ class PredictitAPI:
         except Exception as e:
             logger.error(f"An error occurred: {e}")
 
+    def validate(self, response: dict) -> bool:
+        logger.info("Validating PredictIt response now")
+        try:
+            PredictitResponse(**response)
+            logger.info("Validated successfully")
+            return True
+        except Exception as e:
+            logger.error(f"Validation failed: {e}")
+            raise
+
     def store_to_s3(
         self,
         s3_client: boto3.client,

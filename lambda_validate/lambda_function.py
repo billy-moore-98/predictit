@@ -3,7 +3,7 @@ import json
 import logging
 import os
 
-from src.validate import PredictitResponse
+from src.api import PredictitAPI
 from typing import Optional
 
 logger = logging.getLogger()
@@ -32,7 +32,8 @@ def lambda_function(filename: str):
 
     try:
         # Validate the data
-        PredictitResponse(**data)
+        predictit = PredictitAPI()
+        predictit.validate(data)
         logger.info("Successfully validated data")
     except Exception as e:
         logger.error(f"Error occurred during data validation: {e}")
